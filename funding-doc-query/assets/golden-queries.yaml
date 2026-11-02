@@ -1,0 +1,379 @@
+# 金标准问题集
+#
+# 两段式：
+#   queries:       题目 + 判据（演练阶段只读这一段）
+#   sealed_notes:  逐题答案依据（演练阶段禁止打开；阶段 4 才读）
+#
+# 出题基线：datas-md/by_topic，172 份 .md，扫描于 2026-11-02。
+# 所有 expected / expected_paths / evidence_snippet 均来自真实产物，无编造样本。
+
+meta:
+  version: "1.0.0"
+  corpus_snapshot: "2026-11-02"
+  corpus_size: 172
+  sealed_from_stage: 3
+
+# ══════════════════════════════════════════════════════════════
+# 题目段（演练可见）
+# ══════════════════════════════════════════════════════════════
+queries:
+
+  - id: G1a
+    question: "森国科的投后估值是多少？"
+    question_type: point_query
+    expected: "10.2亿元"
+    expected_paths:
+      - datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+    evidence_layer: 原文证据
+    evidence_snippet: "总股本2365万股 l 拟增发260万股 l 每股39元 l 融资金额1亿 l 投后估值10.2亿元"
+    expected_flags: [multi_source, duplicate_present]
+    allowed_variance: "单位可为「亿元」；数值必须为 10.2；轮次 D 轮须一并出现"
+    notes: "该主体存在 duplicate_of，聚合/计数时只算一家"
+
+  - id: G1b
+    question: "卓远半导体 A 轮的投后估值是多少？"
+    question_type: point_query
+    expected: "6亿元"
+    expected_paths:
+      - datas-md/by_topic/半导体/2023/BP/2023-03-07_BP_卓远半导体_v1.0.md
+    evidence_layer: 正文 + 原文证据
+    evidence_snippet: "A轮融资：江苏双良节能领投，如皋东部跟投 投后估值6亿元 2021.8"
+    expected_flags: [multi_round]
+    allowed_variance: "数值必须为 6；单位亿元或亿均可"
+    notes: "该文档融资历程含 A 轮 6亿元（2021.8）与 B 轮 16亿元（2022.12）两个估值，key_facts 只抽到 A 轮的 6亿元。必须区分轮次，直接答「投后估值 6亿元」而不指明轮次不通过"
+
+  - id: G2
+    question: "湖南艾凯瑞斯智能科技的总经理是谁？"
+    question_type: body_deep
+    expected: "龚胜"
+    expected_paths:
+      - datas-md/by_topic/半导体/2021/BP/2021-06-18_BP_湖南艾凯瑞斯智能科技_v1.0.md
+    evidence_layer: 正文
+    evidence_snippet: "胡天 技术总监\n龚胜 总经理"
+    expected_flags: [body_only]
+    allowed_variance: "只要求姓名「龚胜」；职务必须为「总经理」"
+    notes: "「龚胜」全库仅出现 1 次，且在正文；key_facts/summary 均不含。P1 必然落空，只有 P2 能命中"
+
+  - id: G3a
+    question: "新材料赛道有哪些文档，主体分别是谁？"
+    question_type: aggregation
+    expected: "5 份：欣奕华打造先进材料领域世界领先企业、阜阳欣奕、中熵科技项目、光之科技、晶名光电公司情况介绍"
+    expected_paths:
+      - datas-md/by_topic/新材料/2022/BP/2022-05_BP_欣奕华打造先进材料领域世界领先企业_v1.0.md
+      - datas-md/by_topic/新材料/2022/BP/2022-05_BP_阜阳欣奕_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-03-13_BP_中熵科技项目_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-04-24_BP_光之科技_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-04-26_BP_晶名光电公司情况介绍_v1.0.md
+    evidence_layer: 元数据
+    evidence_snippet: "glob 命中 5 份，全部实读（5 ≤ 8）"
+    expected_flags: [complete_coverage]
+    allowed_variance: "顺序不限；5 份必须全中，少一份即不通过"
+    notes: "5 份可在单轮 read 预算内全部读，覆盖报告须声明「命中 5 实读 5，无未纳入」"
+
+  - id: G3b
+    question: "知识库里有多少份 WHITEPAPER？"
+    question_type: aggregation
+    expected: "11 份"
+    expected_paths:
+      - datas-md/by_topic/半导体/2022/WHITEPAPER/
+      - datas-md/by_topic/半导体/2023/WHITEPAPER/
+      - datas-md/by_topic/半导体/2024/WHITEPAPER/
+    evidence_layer: 路径计数
+    evidence_snippet: "glob(\"datas-md/by_topic/**/WHITEPAPER/*.md\") → 11"
+    expected_flags: [count_only]
+    allowed_variance: "数量必须为 11"
+    notes: "路径级断言：三个目录下的文件总数须为 11；不要求逐一 read"
+
+  - id: G4
+    question: "云潼科技的融资轮次在不同文档里是怎么变化的？"
+    question_type: time_evolution
+    expected: "两份 BP 轮次不同：2022-08 的《重庆云潼科技》为「天使轮」，2022-11 的《云潼科技》为「C轮」。两份 subject 与注册地不同"
+    expected_paths:
+      - datas-md/by_topic/半导体/2022/BP/2022-08_BP_重庆云潼科技_v1.0.md
+      - datas-md/by_topic/半导体/2022/BP/2022-11_BP_云潼科技_v1.0.md
+    evidence_layer: 关键事实
+    evidence_snippet: "轮次: 天使轮 / 轮次: C轮"
+    expected_flags: [multi_source, subject_name_differs]
+    allowed_variance: "两轮次、两日期必须；不得合并成单一结论"
+    notes: "两份 entity_key 同为 云潼科技，但 alias_full 分别为「重庆云潼科技有限公司」「深圳云潼科技有限公司」，须提示主体存疑"
+
+  - id: G5
+    question: "半导体光刻胶的国产化率是多少？"
+    question_type: conflict
+    expected: "库内至少三个不同值，统计对象不同：(1) 2018 年达到 58%；(2) 2020 年中国大陆 IC 光刻胶国产化率仅 5.6%；(3) 2022 年光刻胶（与掩模版合并口径）国产化率在 10% 以下"
+    expected_paths:
+      - datas-md/by_topic/半导体/2021/REPORT/2021-05-18_REPORT_武大首届珞珈半导体学术论坛_v1.0.md
+      - datas-md/by_topic/半导体/2023/REPORT/2023-08-25_REPORT_半导体行业TMT全景图半导体篇_v1.0.md
+      - datas-md/by_topic/半导体/2023/REPORT/2023-06-07_REPORT_科技行业_v1.0.md
+    evidence_layer: 正文
+    evidence_snippet: "光刻胶国产化率：2018年达到58% / 2020年中国大陆本土IC光刻胶市场整体国产化率仅为5.6% / 光刻胶国产化率在10%以下"
+    expected_flags: [multi_source, conflicting]
+    allowed_variance: "三个值必须全部并列；允许补入第四个值，但不得只给一个"
+    notes: "必须并列 + 标注统计口径差异；禁止择一、取平均、取最新。三者统计对象不同，不算彼此矛盾"
+
+  - id: G6
+    question: "知识库里晶湛半导体（GaN 外延材料公司）的估值是多少？"
+    question_type: missing
+    expected: "知识库未收录该主体。全库 172 份 `.md` 中「晶湛」零命中"
+    expected_paths: []
+    evidence_layer: null
+    evidence_snippet: null
+    expected_flags: [empty, must_show_coverage]
+    allowed_variance: "必须输出「未收录」+ 检索路径 + 关键词 + 命中数；只说「没有」不通过"
+    notes: "负样本；须同时说明是否有降级文件可能导致漏检"
+
+  - id: G7
+    question: "深圳市华拓半导体技术有限公司的投后估值是多少？"
+    question_type: alias
+    expected: "5000万（天使轮）。全称仅出现在 2021-06-16 那份的 alias_full 与 tags 中；2021-08-14 那份无估值数据"
+    expected_paths:
+      - datas-md/by_topic/半导体/2021/BP/2021-06-16_BP_深圳市华拓半导体技术_v1.0.md
+    evidence_layer: 原文证据
+    evidence_snippet: "华拓半导体2020 年1 月份启动了天使轮融资，估值5000 万"
+    expected_flags: [multi_source, alias_resolution]
+    allowed_variance: "数值 5000 万；不得答成 2021-08 那份的「原文未提供融资数据」"
+    notes: "全称检索命中 1 份；简称「华拓」命中 2 份。正确答案只在前者。alias_pinyin 全库为 null，不得依赖拼音"
+
+  - id: G8
+    question: "速测半导体显微镜3D全自动检测这个项目的投资亮点是什么？"
+    question_type: degraded
+    expected: "无法回答。该产物 extraction_status 为 needs_ocr，正文不可用，仅元数据可用；投资亮点无从抽取"
+    expected_paths:
+      - datas-md/by_topic/半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md
+    evidence_layer: 元数据
+    evidence_snippet: "⚠️ 文本层为空（疑似扫描/图片型文档），需 OCR 后重新抽取；本产物仅登记元数据。"
+    expected_flags: [degraded, must_not_answer]
+    allowed_variance: "必须明确说明状态与不可用；仅凭「页数 10」编造亮点即失败"
+    notes: "状态降级题；不能因为 key_facts 有「页数: 10」就当成可用文档"
+
+  - id: G9
+    question: "帮我整理森国科的融资历史"
+    question_type: generation
+    expected: "生成一份知识文档，含：融资轮次 D轮、投后估值 10.2 亿元、融资金额 1 亿、营收 1 亿；并附完整来源报告（引用章节映射 + 原文片段 + 检索覆盖）"
+    expected_paths:
+      - datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+      - datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科碳化硅SiC_v1.0.md
+    evidence_layer: 原文证据
+    evidence_snippet: "投后估值10.2亿元"
+    expected_flags: [generation, duplicate_present]
+    allowed_variance: "允许落盘或直接输出全文；但必须含来源报告三节（引用映射 / 原文片段 / 覆盖）"
+    notes: "意图为「整理」→ 可先分流；若判定为生成，须走 B 模板；若判定为问答，须说明为何"
+
+  - id: G10
+    question: "知识库里有多少家公司做过 SiC（碳化硅）相关的项目？"
+    question_type: distractor
+    expected: "须按 entity_key 去重后计数，并把森国科的两份（其中一份 duplicate_of）算作一家；同时区分「主体做 SiC」与「报告里提到 SiC」"
+    expected_paths:
+      - datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+      - datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科碳化硅SiC_v1.0.md
+    evidence_layer: 元数据
+    evidence_snippet: "duplicate_of: by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md"
+    expected_flags: [dedupe_required, must_show_scope]
+    allowed_variance: "不要求具体数字必须精确到个位，但必须声明去重规则、统计口径与覆盖范围；把森国科算成两家即失败"
+    notes: "全库含「碳化硅」或「SiC」的文档 71 份，但绝大多数是正文提及，不是主体。必须说明筛选口径"
+
+# ══════════════════════════════════════════════════════════════
+# 封存答案段（阶段 3 禁止打开，阶段 4 才读）
+# ══════════════════════════════════════════════════════════════
+sealed_notes:
+
+  G1a:
+    authoritative_path: datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+    duplicate_path: datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科碳化硅SiC_v1.0.md
+    duplicate_of: by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+    date: "2022-05"
+    date_source: doc_text
+    key_facts:
+      - "轮次: D轮"
+      - "投后估值: 10.2亿元"
+      - "融资金额: 1亿"
+      - "所在地区: 深圳市"
+      - "营收: 1亿"
+      - "页数: 37"
+    evidence_row: "| 投后估值 | 10.2亿元 | 总股本2365万股 l 拟增发260万股 l 每股39元 l 融资金额1亿 l 投后估值10.2亿元 u 上市目标 登陆国内资本市 场 选板 标准 中介机构 科创板或创业板 市值 |"
+    p3_verdict: PASS
+    source_path: "datas/商业计划书/【半导体】森国科SiC -碳化硅项目商业计划书.pdf"
+
+  G1b:
+    authoritative_path: datas-md/by_topic/半导体/2023/BP/2023-03-07_BP_卓远半导体_v1.0.md
+    date: "2023-03-07"
+    date_source: doc_meta
+    key_facts:
+      - "投后估值: 6亿元"
+      - "轮次: B轮"
+    frontmatter_round: C轮
+    body_rounds:
+      - "A轮融资：江苏双良节能领投，如皋东部跟投 投后估值6亿元 2021.8"
+      - "B轮融资：盛景资本领投，深圳安卫弘、深圳富卫吉远跟投 投后估值16亿元 2022.12"
+      - "C轮融资：欢迎各投资机构参与！！（尚未完成，无估值）"
+    evidence_row: "| 投后估值 | 6亿元 | 09 PART 4-3 融资历程 A轮融资：江苏双良节能领 投，如皋东部跟投 投后估值6亿元 2021.8 B轮融资：盛景资本领投， 深圳安卫弘、深圳富卫吉 远跟投 投后估 |"
+    p3_verdict: "PASS_WITH_NOTE"
+    p3_note: "6亿元对应 A 轮（2021.8）。原文证据片段在 B 轮处被截断，B 轮 16亿元 未进片段；必须回正文第 14 页才能看到全貌。frontmatter round=C轮 与 key_facts 的 B轮 亦不一致"
+    revision: "阶段 3 发现原题「卓远半导体的投后估值是多少？」答案不唯一（A轮6亿 / B轮16亿），退出演练、退回阶段 1 改为指定轮次"
+
+  G2:
+    authoritative_path: datas-md/by_topic/半导体/2021/BP/2021-06-18_BP_湖南艾凯瑞斯智能科技_v1.0.md
+    date: "2021-06-18"
+    date_source: doc_meta
+    body_snippet: "### 第 4 页\n\n胡天 技术总监\n龚胜 总经理\n核心团队"
+    p1_result: "grep 「龚胜」在 frontmatter / 元数据速查 / 摘要 / 关键事实 / 原文证据 中 0 命中；全库仅 1 处，在正文"
+    p3_verdict: "N/A（非数值）"
+
+  G3a:
+    glob: "datas-md/by_topic/新材料/**/*.md"
+    hit_count: 5
+    read_count: 5
+    files:
+      - datas-md/by_topic/新材料/2022/BP/2022-05_BP_欣奕华打造先进材料领域世界领先企业_v1.0.md
+      - datas-md/by_topic/新材料/2022/BP/2022-05_BP_阜阳欣奕_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-03-13_BP_中熵科技项目_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-04-24_BP_光之科技_v1.0.md
+      - datas-md/by_topic/新材料/2023/BP/2023-04-26_BP_晶名光电公司情况介绍_v1.0.md
+    subjects: [欣奕华打造先进材料领域世界领先企业, 阜阳欣奕, 中熵科技项目, 光之科技, 晶名光电公司情况介绍]
+    p3_verdict: PASS
+
+  G3b:
+    glob: "datas-md/by_topic/**/WHITEPAPER/*.md"
+    hit_count: 11
+    files_by_dir:
+      半导体/2022: 3    # 施耐德电气、意法半导体、西门子
+      半导体/2023: 7    # MVTec、保时捷管理咨询、卡思优派、西门子、薪智、中国半导体行业、腾讯云
+      半导体/2024: 1    # Acloudear
+    p3_verdict: PASS
+
+  G4:
+    older:
+      path: datas-md/by_topic/半导体/2022/BP/2022-08_BP_重庆云潼科技_v1.0.md
+      date: "2022-08"
+      date_source: doc_text
+      subject: 重庆云潼科技
+      alias_full: 重庆云潼科技有限公司
+      round: 天使轮
+      evidence: "从天使轮开始的产业资本进驻与投资，进行产业资源配套及国际知名汽车客户导入"
+    newer:
+      path: datas-md/by_topic/半导体/2022/BP/2022-11_BP_云潼科技_v1.0.md
+      date: "2022-11"
+      date_source: doc_text
+      subject: 云潼科技
+      alias_full: 深圳云潼科技有限公司
+      round: C轮
+      key_facts: ["投前估值: 7亿元", "投后估值: 7亿元", "融资金额: 1亿", "成立时间: 2005年", "所在地区: 浙江省", "营收: 451万"]
+    entity_key: 云潼科技
+    expected_findings:
+      - "两份轮次不同（天使轮 vs C轮），不得合并为单一结论"
+      - "两份 alias_full 注册地不同（重庆 vs 深圳），是否同一实体存疑，须提示用户"
+      - "2022-11 的「成立时间 2005年」P3 核验失败：原文所述为斯达半导体（沈华）"
+    p3_verdict: "PASS_WITH_NOTE"
+
+  G5:
+    sources:
+      - path: datas-md/by_topic/半导体/2021/REPORT/2021-05-18_REPORT_武大首届珞珈半导体学术论坛_v1.0.md
+        date: "2021-05-18"
+        date_source: doc_meta
+        value: "2018年达到58%"
+        snippet: "光刻胶国产化率：2018年达到58%。据智研咨询数据，中国本土光刻胶产量从2011年的2.25万吨增长到2018年的4.88万"
+        caliber: "报告未细分 IC / 面板，仅称「中国光刻胶」整体口径，2018 年，来源智研咨询"
+      - path: datas-md/by_topic/半导体/2023/REPORT/2023-08-25_REPORT_半导体行业TMT全景图半导体篇_v1.0.md
+        date: "2023-08-25"
+        date_source: filename
+        value: "5.6%"
+        snippet: "Trendbank统计推算2020年中国大陆本土IC光刻胶市场整体国产化率仅为5.6%"
+        caliber: "中国大陆本土 IC 光刻胶，2020 年口径，来源 Trendbank"
+      - path: datas-md/by_topic/半导体/2023/REPORT/2023-06-07_REPORT_科技行业_v1.0.md
+        date: "2023-06-07"
+        date_source: filename
+        value: "10% 以下"
+        snippet: "涉及前后道工序的光掩模版、光刻胶国产化率在10%以下，尤其ArF 光刻胶目前仍未实现国产量产突破"
+        caliber: "掩模版 + 光刻胶合并口径，2022 年前后"
+    extra_sources:
+      - path: datas-md/by_topic/新材料/2022/BP/2022-05_BP_欣奕华打造先进材料领域世界领先企业_v1.0.md
+        value: "彩色光刻胶国产化率不足10%、黑色光刻胶国产化率约30%"
+        note: "面板光刻胶，与半导体光刻胶不是同一市场，不可混入主答案"
+    expected_verdict: "三值并列 + 标注统计对象差异；不判为矛盾、不择一"
+
+  G6:
+    searched_terms: [晶湛半导体, 晶湛]
+    hit_count: 0
+    glob_used: "datas-md/by_topic/**/*.md（172 份）"
+    degraded_files_in_scope:
+      - "半导体/2026/REPORT/2026-07-28_REPORT_沙利文_v1.0.md（corrupt）"
+      - "半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md（needs_ocr）"
+      - "节能环保/2023/BP/2023-07-08_BP_纤尘不染_v1.0.md（empty）"
+    expected_verdict: "未收录；并说明「降级文件仅 6 份且主题不符，不构成漏检怀疑」"
+
+  G7:
+    full_name_hits: 1
+    short_name_hits: 2
+    authoritative_path: datas-md/by_topic/半导体/2021/BP/2021-06-16_BP_深圳市华拓半导体技术_v1.0.md
+    date: "2021-06-16"
+    date_source: doc_text
+    key_facts: ["轮次: 天使轮", "投后估值: 5000万", "页数: 26"]
+    evidence_row: "| 投后估值 | 5000万 | 效益分析 （1） 高投资回报：华拓半导体2020 年1 月份启动了天使轮融资，估值5000 万；2020 年9 月份启 动了A 轮融资，估值是 1 亿；2021 年4 月份启动 |"
+    p3_verdict: PASS
+    distractor: "2021-08-14 那份 key_facts 只有「页数: 24」，正文为乱码（状态标 ok 但不可读）"
+    alias_pinyin_note: "全库 alias_pinyin 均为 null，拼音路径不可用"
+
+  G8:
+    authoritative_path: datas-md/by_topic/半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md
+    extraction_status: needs_ocr
+    date: "2023-09-27"
+    date_source: doc_meta
+    key_facts: ["页数: 10"]
+    summary: "⚠️ 文本层为空（疑似扫描/图片型文档），需 OCR 后重新抽取；本产物仅登记元数据。"
+    body_available: false
+    expected_verdict: "说明 needs_ocr + 正文不可用 + 无法回答投资亮点；不得编造"
+    remedy: "运行 run_ocr.py 补齐后重试（属 structurer 流程，不在本 Skill 内执行）"
+
+  G9:
+    intent: "「整理」→ 生成；但融资历史条目少，也可判定为问答。两者都可接受，须说明判定理由"
+    authoritative_path: datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md
+    duplicate_path: datas-md/by_topic/半导体/2022/BP/2022-05_BP_森国科碳化硅SiC_v1.0.md
+    facts:
+      轮次: D轮
+      投后估值: 10.2亿元
+      融资金额: 1亿
+      营收: 1亿
+      所在地区: 深圳市
+    full_name: "深圳市森国科科技股份有限公司（出自正文第 2 页；frontmatter alias_full 为 null）"
+    required_sections: [摘要, 正文, 来源报告.引用章节映射, 来源报告.原文片段, 来源报告.检索覆盖]
+    output_path_if_written: "datas-generator/森国科融资历史.md"
+    p3_verdict: PASS
+
+  G10:
+    total_docs_mentioning: 71
+    counts_by_topic_and_type: {"半导体/BP": 38, "半导体/REPORT": 30, "半导体/WHITEPAPER": 3}
+    subjects_with_sic_in_name:
+      - 碳化硅芯片及模块
+      - VisIC
+      - 森国科SiC
+      - 森国科碳化硅SiC
+      - 苏州车规级的碳化硅SiC器件项目BP(简
+    dedupe_rule: "森国科 SiC 两份 entity_key 同为 森国科sic，其中一份 duplicate_of 指向另一份 → 计 1 家；烯钻科技两份同理"
+    entity_key_collision_warning: "entity_key 相同不等于同一家公司：赛迪译丛 3 份是同一发布机构的不同报告"
+    expected_verdict: "必须声明三件事：去重规则、统计口径（主体做 SiC vs 报告提及）、覆盖范围（仅读了哪几份）"
+    non_answer: "直接给一个数字而不说明口径 → 不通过"
+
+# 说明：`expected_flags` 中的 not_observable 标记
+#   · source_available=false 降级路径：全库 172 份均为 true，无样本，未出题
+#   · alias_pinyin 解析路径：全库 0 条非空，G7 只验证 alias_full
+#   这两项在 validation-run.md 的「无真实样本的路径」表中列出，不计入通过率。
+
+# ── 修订历史 ─────────────────────────────────────────────────
+revisions:
+  - date: "2026-11-02"
+    stage: 1
+    action: "初始出题 10 题，覆盖 G1a/G1b/G2/G3a/G3b/G4/G5/G6/G7/G8/G9/G10（G1 拆两题、G3 拆两题）"
+  - date: "2026-11-02"
+    stage: 1
+    note: "source_available=false 在全库无样本，未出题；在 validation-run.md 标 not_observable"
+  - date: "2026-11-02"
+    stage: 1
+    note: "alias_pinyin 全库为 null，G7 只验证 alias_full，拼音路径标 not_observable"
+  - date: "2026-11-02"
+    stage: "3 → 1 回退"
+    gate: G1b
+    action: "原题「卓远半导体的投后估值是多少？」被判定为题目缺陷：该文档融资历程含 A 轮 6亿元 与 B 轮 16亿元 两个投后估值，答案不唯一。按 V2 反作弊硬规则，退出演练退回阶段 1，修改为「卓远半导体 A 轮的投后估值是多少？」，并补 expected_flags: [multi_round]"
+  - date: "2026-11-02"
+    stage: "1 → 3 重跑"
+    gate: G1b
+    action: "修订后重跑该题，通过"

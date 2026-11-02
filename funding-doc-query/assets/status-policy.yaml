@@ -1,0 +1,141 @@
+# 状态 → 可用性 → 标注要求
+#
+# 用途：Step 3 命中文件后、Step 5 组织输出前查表，决定"这份产物能用到什么程度"。
+# 约束：状态来自 structurer 的产物，本 Skill 只读不改。
+
+meta:
+  version: "1.0.0"
+  measured_on: "2026-11-02"
+
+# ── extraction_status ────────────────────────────────────────
+extraction_status:
+  ok:
+    usable_for_answer: true
+    usable_for_clue: true
+    annotation: null
+    action: 正常走 P1 → P2 → P3
+
+  needs_ocr:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 扫描件未 OCR，正文不可用；本产物仅登记元数据"
+    action: 只取 date / subject / 页数；不得提取任何数值
+    measured_count: 2
+
+  encoding_error:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 编码异常（字体缺 ToUnicode 映射），正文为乱码，不可引用"
+    action: 只取元数据；正文一律不可用
+    measured_count: 3
+
+  corrupt:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 文件损坏或 0 字节，仅登记元数据"
+    action: 只取元数据；提示用户从源端重新获取
+    measured_count: 1
+
+  empty:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 未抽取到正文（文档为空或内容不可读）"
+    action: 只取元数据
+    measured_count: 1
+
+  too_large:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 文件过大未解析"
+    action: 只取元数据
+    measured_count: 0
+
+  unsupported:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 格式不支持"
+    action: 只取元数据
+    measured_count: 0
+
+  unknown:
+    usable_for_answer: false
+    usable_for_clue: true
+    annotation: "⚠️ 抽取状态未知，按不可用处理"
+    action: 保守处理
+    measured_count: 0
+
+# ── 隐藏降级：状态 ok 但正文已坏 ──────────────────────────────
+# 检测口径：正文里可读中文占比明显偏低，或出现成片的非文字符号
+# （!"#$% / ຏڪ࣒ / ⁫⋷㢁₴ 之类）。命中即按 needs_ocr 同等待遇。
+implicit_degradation:
+  detection:
+    - "正文中连续出现大量非中文非英文的符号字符"
+    - "`## 抽取提示` 含「中文占比偏低」或「页无文本层」且正文几乎不可读"
+    - "正文与 `## 关键事实` 的字段语义对不上（如 key_facts 有值但正文搜不到）"
+  treatment: "视同 needs_ocr：只作线索，标注「状态标为 ok，但正文实际不可读」"
+  measured_samples:
+    - path: "by_topic/半导体/2021/BP/2021-08-14_BP_深圳市华拓半导体技术_v1.0.md"
+      note: "抽取提示未触发，正文全为乱码；同主体另一份 2021-06-16 BP 正常，极易误判"
+    - path: "by_topic/半导体/2021/BP/2021-08-25_BP_VisIC_v1.0.md"
+      note: "抽取提示为「1/12 页无文本层」，但正文整体不可读"
+    - path: "by_topic/半导体/2022/BP/2022-09-01_BP_智坤半导体_v1.0.md"
+      note: "抽取提示为「中文占比偏低（7%）」，正文为符号串"
+
+# ── source_available ────────────────────────────────────────
+source_available:
+  "true":
+    annotation: null
+    action: 可建议用户打开原件核对
+    measured_count: 172
+
+  "false":
+    annotation: "⚠️ 源文件已失效，历史留存"
+    action: 不得建议用户去打开原件；结论仍可用但需提示溯源受限
+    measured_count: 0
+    note: "全库无真实样本，验证时标 not_observable，不得虚构"
+
+# ── duplicate_of ────────────────────────────────────────────
+duplicate_of:
+  "null":
+    action: 主产物，正常使用
+
+  "<path>":
+    action: "从属产物，不重复计数；引用以主产物为准"
+    counting_rule: "聚合题按 entity_key 去重后计数"
+    measured_pairs:
+      - duplicate: "by_topic/半导体/2022/BP/2022-05_BP_森国科碳化硅SiC_v1.0.md"
+        primary: "by_topic/半导体/2022/BP/2022-05_BP_森国科SiC_v1.0.md"
+        similarity: "0.996"
+      - duplicate: "by_topic/半导体/2023/BP/2023-07-31_BP_深圳烯钻科技_v1.0-38b3db91.md"
+        primary: "by_topic/半导体/2023/BP/2023-07-31_BP_深圳烯钻科技_v1.0.md"
+        similarity: null
+
+# ── date_source 权重 ────────────────────────────────────────
+date_source_weight:
+  doc_text: 5
+  doc_meta: 5
+  filename: 3
+  fs_mtime: 1
+  unknown: 0
+rules:
+  - "权重高者优先作为「更新」的判断依据"
+  - "fs_mtime 不得用于「最新优先」"
+  - "unknown 排最后，且不参与最新判定"
+measured_counts:
+  doc_meta: 89
+  doc_text: 51
+  filename: 30
+  fs_mtime: 2
+  unknown: 0
+
+# ── 已知 P3 核验高风险 ───────────────────────────────────────
+p3_risk_patterns:
+  - pattern: "单位被截断"
+    sample: "米格实验室 投后估值: 2亿人（原文：2亿人民币）"
+  - pattern: "主语错位"
+    sample: "云潼科技 成立时间: 2005年（原文说的是斯达半导体）"
+  - pattern: "行业值冒充主体值"
+    sample: "长城证券 REPORT 营收: 42.50亿（原文是 SK海力士 42.50 亿美元）"
+  - pattern: "投前值填进投后"
+    sample: "利之达科技 投前估值/投后估值 同为 2亿元（原文只给投前）"
+handling: "P3 发现即标「未核实」并说明；不得修正后当结论，不得删除当没发生"

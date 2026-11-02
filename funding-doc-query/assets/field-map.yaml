@@ -1,0 +1,137 @@
+# 常见问题 → 目标字段/区段 → 推荐检索词
+#
+# 用途：Step 1「查询解析」阶段查表，避免临场拼关键词。
+# 约束：所有 recommended_globs 均从 by_topic 起并限定 *.md。
+
+meta:
+  version: "1.0.0"
+  measured_on: "2026-11-02"
+  corpus_size: 172
+
+# ── 字段级映射 ────────────────────────────────────────────────
+fields:
+  投后估值:
+    aliases: [估值, 投后, post-money, 估值多少, 投后估值]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["投后估值", "投后", "估值"]
+    caveat: "实测 15 份有该字段；单位混用（亿元/亿/万元/万），且存在截断（如「2亿人」），必须 P3 核验"
+
+  投前估值:
+    aliases: [投前, pre-money, 投前估值]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["投前估值", "投前"]
+    caveat: "实测 7 份。常与投后估值写成同值（原文只给了投前），不可据此推算投后"
+
+  融资金额:
+    aliases: [融资额, 融资多少, 募资, 本轮融资]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["融资金额", "融资", "募资"]
+    caveat: "实测 7 份。原文常有区间（5000万-1亿），key_facts 只取到一个端点，需回正文看区间"
+
+  轮次:
+    aliases: [融资轮次, 哪一轮, round, A轮, 天使轮]
+    primary_layer: frontmatter.round + 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["轮次", "融资轮次", "天使轮", "Pre-A", "A轮", "B轮", "C轮", "D轮", "E轮"]
+    caveat: "实测 26 份有 round。同一主体多份 BP 的轮次会不同（正常，是不同时点）"
+
+  营收:
+    aliases: [收入, 销售额, 营业收入, 年销售]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["营收", "收入", "销售额", "营业收入"]
+    caveat: "实测 45 份。REPORT 里的「营收」常指文中提到某巨头的营收，不是报告主体的；P3 必查主语"
+
+  成立时间:
+    aliases: [成立于, 成立年份, 创立时间]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["成立时间", "成立于", "成立"]
+    caveat: "实测 15 份。BP 正文里的「成立于」常说的是行业标杆公司（如斯达半导体），主语约束极弱"
+
+  所在地区:
+    aliases: [地址, 总部, 注册地, 在哪个城市]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["所在地区", "总部", "位于", "注册地"]
+    caveat: "实测 15 份。同一 entity_key 的不同文档可能给出不同注册地（重庆 vs 深圳），属主体辨析问题"
+
+  页数:
+    aliases: [多少页, 篇幅]
+    primary_layer: frontmatter.key_facts
+    verify_layer: 无需
+    grep_terms: ["页数"]
+    caveat: "实测 168 份有，是唯一在降级产物中也保留的字段"
+
+  发布机构:
+    aliases: [谁发布的, 出品方, 作者, 分析师]
+    primary_layer: 关键事实
+    verify_layer: 原文证据
+    grep_terms: ["发布机构", "分析师", "author"]
+    caveat: "实测 70 份（REPORT/WHITEPAPER 为主）。抽取质量不稳，有截断（如「究院集成电路研究所」）"
+
+# ── 正文专属维度（key_facts 不抽，只能走 P2）────────────────────
+body_only_dimensions:
+  核心团队:
+    aliases: [创始人, 团队, 高管, CEO, 总经理, 董事长]
+    layer: 正文
+    grep_terms: ["核心团队", "创始人", "总经理", "董事长", "CEO", "联合创始人"]
+    caveat: "结构分散在页面文本里，姓名与职务常分两行；需读上下文判定谁是什么职务"
+    example: "艾凯瑞斯 BP 第 4 页「胡天 技术总监 / 龚胜 总经理 / 陈逢军 副总经理」"
+
+  技术路线:
+    aliases: [技术方案, 工艺, 产品线]
+    layer: 正文
+    grep_terms: ["技术路线", "工艺", "产品线", "SiC", "碳化硅", "GaN", "氮化镓"]
+    caveat: "中英文并查；实测「SiC」与「碳化硅」在同一批文档里分布不均"
+
+  客户:
+    aliases: [客户名单, 下游, 合作方]
+    layer: 正文
+    grep_terms: ["客户", "合作", "下游", "导入"]
+    caveat: "客户名可能出现在图表 OCR 残留里，注意区分「客户」与「竞品」"
+
+  股东与股权:
+    aliases: [股权结构, 股东, 投资方]
+    layer: 正文
+    grep_terms: ["股权结构", "股东", "投资方", "持股"]
+
+  知识产权:
+    aliases: [专利, 软著, 布图设计]
+    layer: 正文
+    grep_terms: ["专利", "著作权", "软著", "布图设计"]
+
+# ── 赛道级映射（聚合题用）─────────────────────────────────────
+topics:
+  半导体:
+    doc_count: 159
+    glob: "datas-md/by_topic/半导体/**/*.md"
+    note: "本库绝对主力；任何跨赛道结论都会被它主导，聚合题须声明赛道范围"
+  新材料:
+    doc_count: 5
+    glob: "datas-md/by_topic/新材料/**/*.md"
+  新能源:
+    doc_count: 2
+    glob: "datas-md/by_topic/新能源/**/*.md"
+  企业服务:
+    doc_count: 1
+    glob: "datas-md/by_topic/企业服务/**/*.md"
+  节能环保:
+    doc_count: 1
+    glob: "datas-md/by_topic/节能环保/**/*.md"
+  其他:
+    doc_count: 4
+    glob: "datas-md/by_topic/其他/**/*.md"
+    note: "含 DOC/NOTE/OTHER，多为技术文档与笔记，非投融资材料"
+
+# ── 类型级映射 ────────────────────────────────────────────────
+doc_types:
+  BP:        {doc_count: 84, glob: "datas-md/by_topic/**/BP/*.md",        note: "融资数据主要来源"}
+  REPORT:    {doc_count: 73, glob: "datas-md/by_topic/**/REPORT/*.md",    note: "行业口径，subject 是发布机构不是被投企业"}
+  WHITEPAPER: {doc_count: 11, glob: "datas-md/by_topic/**/WHITEPAPER/*.md", note: "厂商视角，偏向技术与方案"}
+  DOC:       {doc_count: 2,  glob: "datas-md/by_topic/**/DOC/*.md",       note: "技术文档，key_facts 允许为空"}
+  NOTE:      {doc_count: 1,  glob: "datas-md/by_topic/**/NOTE/*.md",      note: "笔记"}
+  OTHER:     {doc_count: 1,  glob: "datas-md/by_topic/**/OTHER/*.md",     note: "兜底，内容不定"}
