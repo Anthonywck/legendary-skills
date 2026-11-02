@@ -1,0 +1,114 @@
+# 格式注册表：扩展名 → 解析器
+# 新增格式只需在此登记，extract.py 不改代码。
+# status: supported 可抽取 / partial 尽力而为（可能降级） / unsupported 明确登记不支持 / ignored 明确忽略
+# 未出现在 formats 中的扩展名一律按 default 处理，并登记为 unsupported。
+
+version: 3
+updated: 2026-10-30
+
+default:
+  status: unsupported
+  reason: 格式未登记，未尝试解析
+
+formats:
+  # ---------------- 文档 ----------------
+  .pdf:
+    status: supported
+    parser: pymupdf
+    requires: [pymupdf]
+    note: 逐页抽取文本层；无文本层的页自动 OCR（默认开启）
+  .pptx:
+    status: supported
+    parser: python-pptx
+    requires: [pptx]
+    note: 逐页抽取文本框、表格、备注
+  .docx:
+    status: supported
+    parser: python-docx
+    requires: [docx]
+    note: 段落 + 表格；含图片的段落不 OCR（保持结构清晰）
+  .ppt:
+    status: supported
+    parser: legacy-office
+    requires: [olefile]
+    fallback: image-ocr
+    note: 解析 OLE 内的 TextCharsAtom/TextBytesAtom；解析失败时可改走 OCR
+  .doc:
+    status: supported
+    parser: legacy-office
+    requires: [olefile]
+    fallback: image-ocr
+    note: 解析 FIB + piece table 取正文；加密或结构异常时降级为 unsupported 并给出补救命令
+
+  # ---------------- 图片 ----------------
+  .png:  {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .jpg:  {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .jpeg: {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .bmp:  {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .tif:  {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .tiff: {status: supported, parser: image-ocr, requires: [rapidocr]}
+  .webp: {status: supported, parser: image-ocr, requires: [rapidocr]}
+
+  # ---------------- 纯文本 ----------------
+  .md:
+    status: supported
+    parser: markdown
+    requires: []
+    note: 原样保留正文与标题层级，不重新渲染
+  .markdown:
+    status: supported
+    parser: markdown
+    requires: []
+  .txt:
+    status: supported
+    parser: plain-text
+    requires: []
+    note: 按 utf-8-sig → utf-8 → gb18030 顺序解码；无结构信息，全部作为正文
+  .log:
+    status: supported
+    parser: plain-text
+    requires: []
+    note: 与 .txt 同处理
+
+  # ---------------- 表格 ----------------
+  .csv:
+    status: supported
+    parser: csv
+    requires: []
+    note: 自动识别 , ; tab | 分隔符与编码，转 Markdown 表格；正文保留按行拼接的纯文本便于 grep
+  .tsv:
+    status: supported
+    parser: csv
+    requires: []
+    note: 同 .csv，默认按 tab 分隔
+  .xlsx:
+    status: supported
+    parser: xlsx
+    requires: [openpyxl]
+    note: 逐工作表转 Markdown 表格；data_only=True 取公式计算结果，不取公式文本
+
+  # ---------------- 明确忽略 ----------------
+  .zip: {status: ignored, reason: 压缩包不展开、不处理}
+  .rar: {status: ignored, reason: 压缩包不展开、不处理}
+  .7z:  {status: ignored, reason: 压缩包不展开、不处理}
+
+# 依赖：脚本启动时探测，缺失则按 requirements 安装（venv 内，不污染系统 Python）
+requirements:
+  required: [pymupdf, python-pptx]
+  recommended:
+    rapidocr: 扫描件与图片的 OCR（纯 onnxruntime，无需系统依赖）
+    olefile: .doc / .ppt 解析
+    openpyxl: .xlsx 解析
+  optional:
+    pymupdf4llm: 仅 FDS_LLM_MARKDOWN=1 时用于生成更丰富的 Markdown
+    python-docx: .docx 支持
+    pyyaml: 读取本注册表（缺失时脚本回退到内置默认表）
+    pypinyin: 生成拼音首字母别名 aliases_pinyin；缺失时该字段写 null
+
+# 相关环境变量
+env:
+  FDS_OCR: "1 开启 OCR（默认）/ 0 关闭，扫描件将只标记 needs_ocr"
+  FDS_OCR_DPI: "OCR 渲染分辨率，默认 150；扫描件表格建议 200"
+  FDS_OCR_MAX_PAGES: "单份文件最多 OCR 页数，默认 60，防止超大扫描件拖垮批次"
+  FDS_LLM_MARKDOWN: "1 时用 pymupdf4llm 生成更丰富的 Markdown（会触发内置 OCR，较慢）"
+  FDS_ROOT: "沙箱演练用的项目根覆盖，生产环境不要设置"
