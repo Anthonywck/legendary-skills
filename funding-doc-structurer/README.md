@@ -17,6 +17,7 @@
 - [日常增量](#日常增量)
 - [看懂运行报告](#看懂运行报告)
 - [产物长什么样](#产物长什么样)
+- [下游：funding-doc-query](#下游funding-doc-query)
 - [目录与文件名规则](#目录与文件名规则)
 - [配置项](#配置项)
 - [维护手册](#维护手册)
@@ -36,7 +37,7 @@
 
 | 不做 | 为什么 |
 | --- | --- |
-| 检索问答 | 下游 Skill 的职责 |
+| 检索问答 | 下游 `funding-doc-query` 的职责，见 [下游：funding-doc-query](#下游funding-doc-query) |
 | Term Sheet / 尽调清单生成 | 同上 |
 | 向量库 | 方案明确用文件系统原生能力 |
 | 修改/移动/删除 `datas` 里的原件 | 原件只读是硬约束 |
@@ -314,6 +315,49 @@ $PY $S/sync.py --prune             # 交互确认
 
 ---
 
+## 下游：funding-doc-query
+
+本 Skill 的产物由同级的 **`funding-doc-query`** 消费。两者是单向链路：
+
+```
+datas/ ──structurer──▶ datas-md/by_topic/ ──query──▶ datas-generator/
+（原件只读）             （本 Skill 的唯一输出）        （下游的唯一写入区）
+```
+
+### 边界
+
+| 本 Skill 负责 | 下游 Skill 负责 |
+| --- | --- |
+| 组织目录、命名、生成元数据 | 检索、问答、知识文档生成 |
+| 维护 `_index/` 索引 | 维护引用 ID、来源报告、覆盖报告 |
+| 决定赛道 / doc_type / 落位 | 判定是否需要联网补足 |
+| OCR、编码、损坏等抽取问题 | 金标准题库与验证演练 |
+
+### 本 Skill 对下游的承诺（下游据此编写检索逻辑）
+
+| 契约 | 说明 |
+| --- | --- |
+| 检索入口 | 恒从 `by_topic` 起并限定 `*.md`；`_index/` 下无 `.md`，天然不入选 |
+| 固定字段 | `subject` / `topic` / `date` / `date_source` / `round` / `key_facts` / `summary` / `extraction_status` / `source_available` / `source_path` / `duplicate_of` |
+| 主体别名 | `subject` / `alias_short` / `alias_full` / `alias_en` / `alias_pinyin` / `tags` / 文件名 / 正文 `entity_key` |
+| `key_facts` | 每条一行，统一 `字段: 值` |
+| 正文区段 | `元数据速查` / `摘要` / `关键事实` / `原文证据`（字段→值→原文片段三列）/ `抽取提示` / `正文`（按页分节） |
+| 赛道闭集 | 半导体 / 新材料 / 新能源 / 企业服务 / 节能环保 / 其他 |
+
+**不承诺**的事（下游须自行降级处理，见其 `assets/status-policy.yaml`）：
+`alias_pinyin` 当前未生成（需 `pypinyin`）；`## 关键事实` 有 4 份缺失；
+`extraction_status` 标 `ok` 不保证正文可读（见下方「已知限制」第 7 条）。
+
+### 反向约束
+
+下游 **只读** `datas-md/`，写盘只到 `datas-generator/`，且生成物**不参与后续检索**。
+
+本 Skill 不受下游影响：脚本中没有任何对 `datas-generator/` 的读写；
+`maintenance.py` 的孤儿回收**只动 `by_topic/**/*.md`**，且仅删除带本 Skill frontmatter
+指纹的产物，`datas-generator/` 与 `datas/` 都不在其作用域内。
+
+---
+
 ## 产物长什么样
 
 路径示例：
@@ -563,42 +607,42 @@ $PY $S/sync.py --rebuild
 
 | 文件 | 行数 | 职责 | 加载时机 |
 | --- | --- | --- | --- |
-| `SKILL.md` | 220 | 主入口：何时用、主流程、支持格式、硬规则 | 始终 |
-| `references/taxonomy.md` | 144 | 赛道封闭集、判定决策树、doc_type、主体、路径推导 | 要判定赛道/类型/落位 |
+| `SKILL.md` | 227 | 主入口：何时用、主流程、支持格式、硬规则 | 始终 |
+| `references/taxonomy.md` | 145 | 赛道封闭集、判定决策树、doc_type、主体、路径推导 | 要判定赛道/类型/落位 |
 | `references/naming.md` | 124 | 文件名规范、日期五级优先级、归一化陷阱 | 要定文件名/取日期 |
 | `references/metadata-schema.md` | 110 | 字段总表、取值矩阵、别名四件套 | 要确认字段取值 |
-| `references/extraction-sop.md` | 217 | 单文件 9 步 SOP、质量判据、疑点报告、幂等要求 | 处理具体文件 |
+| `references/extraction-sop.md` | 218 | 单文件 9 步 SOP、质量判据、疑点报告、幂等要求 | 处理具体文件 |
 | `references/sync-and-index.md` | 189 | 索引字段、四种同步行为、源目录发现、两阶段 | 同步/改名/失联 |
 | `references/troubleshooting.md` | 197 | 九类异常的现象、根因、处理 | 抽取状态异常 |
 | `examples/bp-pdf-example.md` | 121 | BP-PDF 全流程正例 | 需要 BP 例子 |
 | `examples/report-pdf-example.md` | 125 | 行业报告全流程正例 | 需要报告例子 |
 | `examples/pptx-example.md` | 124 | PPTX 全流程正例 | 需要 PPTX 例子 |
 | `examples/sync-example.md` | 156 | 新增/改名/删除/重建/幂等 | 要看同步行为 |
-| `examples/anti-patterns.md` | 506 | 28 条真实踩过的坑 + 3 条用户约束 | 要知道什么会出错 |
+| `examples/anti-patterns.md` | 506 | 28 条真实踩过的坑 + 2 条用户约束（13b / 13c） | 要知道什么会出错 |
 | `scripts/clean.py` | 71 | 产物空白清洗（代码块保护、语义零改动） | 被 emit / validate 调用 |
-| `assets/taxonomy.yaml` | 150 | 赛道封闭集 + 方括号映射 + doc_type 规则 | 脚本运行时 |
-| `assets/formats.yaml` | 115 | 格式 → 解析器映射 + 依赖 + 环境变量 | 脚本运行时 |
+| `assets/taxonomy.yaml` | 144 | 赛道封闭集 + 方括号映射 + doc_type 规则 | 脚本运行时 |
+| `assets/formats.yaml` | 114 | 格式 → 解析器映射 + 依赖 + 环境变量 | 脚本运行时 |
 | `scripts/common.py` | 162 | 路径、配置、哈希、错误日志（重导出命名域/索引域） | 被所有脚本 import |
 | `scripts/naming.py` | 389 | 日期、主体、赛道、doc_type、路径推导 | 脚本运行时 |
 | `scripts/index_io.py` | 58 | 索引 CSV 与视图读写 | 脚本运行时 |
 | `scripts/frontmatter.py` | 55 | frontmatter 序列化（固定字段序保证幂等） | 脚本运行时 |
-| `scripts/parsers.py` | 298 | 文档类解析器（PDF/PPTX/DOCX/DOC/PPT/图片）与解析器总表 | 被 extract import |
+| `scripts/parsers.py` | 301 | 文档类解析器（PDF/PPTX/DOCX/DOC/PPT/图片）与解析器总表 | 被 extract import |
 | `scripts/parsers_data.py` | 213 | 纯文本与表格解析器（TXT/MD/CSV/TSV/XLSX） | 被 parsers import |
 | `scripts/extract.py` | 229 | 抽取入口 + 质量判定 + 乱码检测 | 被 sync import；可单独诊断 |
 | `scripts/ocr_backend.py` | 111 | RapidOCR 封装（懒加载、单例、日志隔离、失败降级） | 被 parsers 调用 |
 | `scripts/legacy_office.py` | 214 | `.doc` / `.ppt` 纯 Python 解析（olefile） | 被 parsers 调用 |
 | `scripts/facts.py` | 169 | 事实抽取、摘要、key_facts、同句证据片段 | 被 build_frontmatter import |
-| `scripts/date_resolve.py` | 130 | 日期五级优先级与防臆造闸门 | 被 build_frontmatter import |
-| `scripts/build_frontmatter.py` | 251 | 记录组装 + 字段校验 | 被 sync import |
-| `scripts/dedupe_entities.py` | 182 | 主体归一 + 重复识别 + 互链 | sync 后置阶段 |
-| `scripts/emit.py` | 189 | 产物渲染、路径分配、单文件处理 | 被 sync import |
+| `scripts/date_resolve.py` | 131 | 日期五级优先级与防臆造闸门 | 被 build_frontmatter import |
+| `scripts/build_frontmatter.py` | 254 | 记录组装 + 字段校验 | 被 sync import |
+| `scripts/dedupe_entities.py` | 231 | 主体归一 + 重复识别 + 互链 | sync 后置阶段 |
+| `scripts/emit.py` | 192 | 产物渲染、路径分配、单文件处理 | 被 sync import |
 | `scripts/maintenance.py` | 166 | 去重互链、孤儿回收、陈旧清理、按需取正文 | sync 后置阶段 |
 | `scripts/report.py` | 231 | 结构化运行报告（终端 + `last_run_report.txt`） | sync 结束 |
 | `scripts/run_ocr.py` | 159 | 阶段二：批量补 OCR | 手动运行 |
-| `scripts/sync.py` | 377 | `--rebuild` / `--sync` / `--prune` 主流程 + 规则变更检测 | 主入口 |
+| `scripts/sync.py` | 414 | `--rebuild` / `--sync` / `--prune` 主流程 + 规则变更检测 | 主入口 |
 | `scripts/check_env.py` | 222 | 环境探测（必需/建议/可选三档） | 首次运行 |
-| `scripts/validate_output.py` | 267 | 目录/命名/字段/可 grep/索引一致性校验 | 每次全量后 |
-| `scripts/selftest.py` | 213 | 端到端回归（45 个断言） | 改动脚本后 |
+| `scripts/validate_output.py` | 351 | 目录/命名/字段/可 grep/索引一致性校验 | 每次全量后 |
+| `scripts/selftest.py` | 213 | 端到端回归（24 处断言） | 改动脚本后 |
 
 所有脚本单文件 ≤400 行。`common` 负责无争议的基础设施，`naming` 负责所有落位判定，
 `emit` 负责写文件，`maintenance` 负责写完之后的整树整理。
@@ -731,4 +775,8 @@ Windows 软链接需管理员权限，且会让 glob 出现重复命中。
 3. **不做实体消歧**：`中熵科技` 与 `中熵新能源` 若是不同法人，需 `overrides.yaml` 人工区分。
 4. **`alias_full` 偏低召回**：只采纳包含主体名的工商全称，宁缺毋滥。
 5. **`.ppt` 复杂版式会丢**：只取文本原子，形状/图层关系不保留。
-6. **全量耗时**：168 份 PDF 阶段一约 1–3 分钟；扫描件走阶段二，每页约 4 秒。
+6. **全量耗时**：172 份源文件（162 PDF + 6 PPTX + 2 DOCX + MD/PNG）阶段一约 1–3 分钟；扫描件走阶段二，每页约 4 秒。
+7. **乱码检测有漏网**：`GARBLE_MAX = 0.15` 只拦「异域脚本字符」，对「拉丁字母 + 数字 + 符号」
+   型乱码（如 `!"#$%`、`⁫⋷㢁₴`）不生效。实测有 3 份产物 `extraction_status: ok`
+   但正文不可读（华拓 2021-08-14、VisIC、智坤半导体），CJK 占比分别为 22% / 15% / 7%。
+   下游须自行做「正文可读性」二次判定；本 Skill 不修改这 3 份的状态。

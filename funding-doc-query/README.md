@@ -13,6 +13,18 @@
 结论 → [S#] → 产物路径 → 区段 → 逐字原文片段 → 原始文件 source_path
 ```
 
+## 上下游
+
+本 Skill 是链路的下游，上游为同级的 **`funding-doc-structurer`**：
+
+```
+datas/ ──structurer──▶ datas-md/by_topic/ ──query（本 Skill）──▶ datas-generator/
+（原件只读）             （本 Skill 的唯一输入）      （本 Skill 的唯一写入区）
+```
+
+上游的 SKILL.md 与 README 定义了产物形态与字段契约；本 Skill **只依赖契约，不依赖实现**——
+上游换生成模板不影响检索逻辑，本 Skill 调检索策略也不影响上游落位。
+
 ## 安装
 
 ```
@@ -48,7 +60,8 @@
 | 判定是否需要联网补足 | 决定赛道与 doc_type |
 | 自带金标准题库与验证协议 | 处理 OCR、编码、损坏 |
 
-**只依赖下游稳定契约**，不依赖 structurer 内部脚本。换生成模板不影响本 Skill 的检索逻辑。
+**只依赖上游稳定契约**，不依赖 structurer 内部脚本。换生成模板不影响本 Skill 的检索逻辑。
+上游对下游的承诺见 `../funding-doc-structurer/README.md` 的「下游：funding-doc-query」一节。
 
 ### 依赖的契约（实测于 2026-11-02，172 份产物）
 
@@ -67,7 +80,7 @@
 | `alias_pinyin` 全库为 `null` | 0/172 非空 | 跳过该解析步，不报错 |
 | `## 关键事实` 并非每份都有 | 168/172 | 缺时读 frontmatter 的 `key_facts` |
 | `project` 恒为 `null` | 172/172 | 不参与任何检索 |
-| 部分 `ok` 产物正文实为乱码 | 3 份 | 按 `needs_ocr` 同等待遇降级 |
+| 部分 `ok` 产物正文实为乱码 | 3 份（CJK 占比 22% / 15% / 7%） | 按 `needs_ocr` 同等待遇降级；上游已登记为已知限制第 7 条 |
 | `duplicate_of` 只标不删 | 2 份 | 聚合时按 `entity_key` 去重 |
 
 ## 目录说明（逐文件：职责 / 行数 / 触发信号）
@@ -80,19 +93,19 @@
 | `references/query-intent.md` | 77 | 意图分流表、模糊时 ≤3 问话术、五类检索类型 | 判断是问答/生成/模糊，或需要追问时 |
 | `references/retrieval-playbook.md` | 204 | glob 组合、三级检索、主体别名解析、时间权重、回溯、覆盖报告 | 实际执行检索时 |
 | `references/output-and-citation.md` | 117 | 两类输出模板、引用 ID 规则、来源报告字段 | 组织输出时 |
-| `references/edge-cases.md` | 216 | 冲突并列、未收录、状态降级矩阵、联网闸门、防注入 | 遇到冲突/缺失/降级/联网/疑似注入时 |
+| `references/edge-cases.md` | 227 | 冲突并列、未收录、状态降级矩阵、联网闸门、防注入 | 遇到冲突/缺失/降级/联网/疑似注入时 |
 | `references/validation-playbook.md` | 119 | V1–V5：出题矩阵、隔离协议、评分维度、迭代出口 | 用户要看验证、复跑验证、或改题库时 |
-| `assets/field-map.yaml` | 136 | 问题 → 字段/区段 → 推荐检索词；含实测计数与 P3 风险提示 | 查询解析（Step 1）时 |
-| `assets/status-policy.yaml` | 141 | 状态 → 可用性 → 标注要求；含隐藏降级检测口径 | 命中文档含降级状态时 |
-| `assets/golden-queries.yaml` | 379 | 12 题金标准题库（`queries` 可读 + `sealed_notes` 封存） | 跑验证时 |
+| `assets/field-map.yaml` | 137 | 问题 → 字段/区段 → 推荐检索词；含实测计数与 P3 风险提示 | 查询解析（Step 1）时 |
+| `assets/status-policy.yaml` | 142 | 状态 → 可用性 → 标注要求；含隐藏降级检测口径 | 命中文档含降级状态时 |
+| `assets/golden-queries.yaml` | 393 | 12 题金标准题库（`queries` 可读 + `sealed_notes` 封存） | 跑验证时 |
 | `examples/qa-point-query.md` | 87 | 正例：单主体单指标，含 P3 核验与去重 | 需要看问答格式时 |
 | `examples/qa-aggregation.md` | 98 | 正例：「新材料赛道有哪些文档」，全覆盖无未纳入 | 需要看聚合格式时 |
 | `examples/doc-generation.md` | 143 | 正例：生成融资历史 + 完整来源报告 + 落盘 | 需要看生成格式时 |
 | `examples/conflict-case.md` | 108 | 正例：光刻胶国产化率三源冲突 + 面板干扰源隔离 | 需要看冲突处理时 |
 | `examples/missing-case.md` | 93 | 正例：晶湛半导体未收录 + 降级漏检排查 | 需要看拒答格式时 |
-| `examples/validation-run.md` | 630 | **本轮实测**的验证报告（基线 / 逐题 / 评分 / 遗留） | 复跑对照时 |
-| `examples/validation-sealed-answers.md` | 190 | 封存答案 + 阶段 4 比对记录 | **仅阶段 4**，阶段 3 禁止打开 |
-| `examples/anti-patterns.md` | 169 | 10 条反例，每条对应本库真实产物 | 交付前自查时 |
+| `examples/validation-run.md` | 655 | **本轮实测**的验证报告（基线 / 逐题 / 评分 / 遗留） | 复跑对照时 |
+| `examples/validation-sealed-answers.md` | 194 | 封存答案 + 阶段 4 比对记录 | **仅阶段 4**，阶段 3 禁止打开 |
+| `examples/anti-patterns.md` | 172 | 10 条反例，每条对应本库真实产物 | 交付前自查时 |
 
 **加载原则**：未命中信号不加载。`SKILL.md` 单独可用；只做简单点查时理论上不需要打开任何 references。
 
@@ -140,6 +153,7 @@
 | D7 | 验证报告模板六节 | 六节齐全，另加「本轮验证的已知局限」小节 | 出题与执行同源是方法论固有局限，须显式登记 |
 | D8 | examples 中的「业务类」5 个 | 全部落地，另加 `validation-sealed-answers.md` | 该文件属验证协议产物，非业务类 |
 | D9 | 未要求写 `README.md` 的偏离/假设章节 | 写在本 README 末尾 | Prompt 步骤 11 要求交付时输出「偏离说明」「假设清单」「无法实测清单」，放 README 便于随包携带 |
+| D10 | G8 取材 `needs_ocr` 真实文件 | 改用 `encoding_error` 的中博芯 | 2026-11-02 14:00 上游补 OCR，原 2 份 `needs_ocr` 全部转为 `ok`，无样本可用；换样本保留「降级不作答」的验证意图 |
 
 ## 假设清单
 
@@ -153,6 +167,7 @@
 | A6 | 中文关键词为主，英文并查 | 聚合召回 | `SiC` 50 / `碳化硅` 53，只搜一个会漏 20+ 份 |
 | A7 | 用户能接受「不给出单一数字」 | G10 类问题 | 若必须给数字，须先与用户确认口径 |
 | A8 | 生成物落 `datas-generator/`，与 `datas-md/` 同级 | 写盘边界 | 若部署环境改了相对位置，写入区需重配 |
+| A9 | 知识库快照是**静态**的 | 金标准题库、状态计数、examples 中的样本 | **已被证伪**：2026-11-02 14:00/14:26 上游两次重跑，2 份 `needs_ocr` 转 `ok`、全部产物重新渲染。引用任何状态或样本前必须实查，不得依赖 README/examples 中的快照数字 |
 
 ## 无法实测清单
 

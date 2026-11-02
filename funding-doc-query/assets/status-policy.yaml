@@ -20,7 +20,8 @@ extraction_status:
     usable_for_clue: true
     annotation: "⚠️ 扫描件未 OCR，正文不可用；本产物仅登记元数据"
     action: 只取 date / subject / 页数；不得提取任何数值
-    measured_count: 2
+    measured_count: 0
+    note: "2026-11-02 14:00 上游补 OCR 后，库内已无 needs_ocr 样本；该分支仍保留（新扫描件入库时会重新出现）"
 
   encoding_error:
     usable_for_answer: false

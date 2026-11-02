@@ -135,16 +135,16 @@ queries:
     notes: "全称检索命中 1 份；简称「华拓」命中 2 份。正确答案只在前者。alias_pinyin 全库为 null，不得依赖拼音"
 
   - id: G8
-    question: "速测半导体显微镜3D全自动检测这个项目的投资亮点是什么？"
+    question: "中博芯半导体科技的 GaN 基半导体项目，融资轮次和估值是多少？"
     question_type: degraded
-    expected: "无法回答。该产物 extraction_status 为 needs_ocr，正文不可用，仅元数据可用；投资亮点无从抽取"
+    expected: "无法从正文回答。该产物 extraction_status 为 encoding_error（字体缺 ToUnicode 映射，正文为乱码），正文不可用，仅元数据可用（日期 2021-08-14、页数 28）；不得从乱码中提取任何数值"
     expected_paths:
-      - datas-md/by_topic/半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md
+      - datas-md/by_topic/半导体/2021/BP/2021-08-14_BP_中博芯半导体科技_v1.0.md
     evidence_layer: 元数据
-    evidence_snippet: "⚠️ 文本层为空（疑似扫描/图片型文档），需 OCR 后重新抽取；本产物仅登记元数据。"
+    evidence_snippet: "⚠️ 正文字体缺少 ToUnicode 映射，抽取结果为乱码已作废；本产物仅登记元数据，需重新获取可搜索版 PDF 或 OCR。"
     expected_flags: [degraded, must_not_answer]
-    allowed_variance: "必须明确说明状态与不可用；仅凭「页数 10」编造亮点即失败"
-    notes: "状态降级题；不能因为 key_facts 有「页数: 10」就当成可用文档"
+    allowed_variance: "必须明确说明状态与不可用；仅凭 key_facts 的「页数: 28」或正文乱码里的数字作答即失败"
+    notes: "状态降级题。原题取材自 needs_ocr 的「速测半导体显微镜」，该文件已于 2026-11-02 14:00 被上游补 OCR 转为 ok，故按 V5 换样本"
 
   - id: G9
     question: "帮我整理森国科的融资历史"
@@ -296,10 +296,12 @@ sealed_notes:
     hit_count: 0
     glob_used: "datas-md/by_topic/**/*.md（172 份）"
     degraded_files_in_scope:
-      - "半导体/2026/REPORT/2026-07-28_REPORT_沙利文_v1.0.md（corrupt）"
-      - "半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md（needs_ocr）"
+      - "半导体/2026/REPORT/2026-07-28_REPORT_沙利文_v1.0.md（corrupt / fs_mtime）"
+      - "半导体/2021/BP/2021-08-14_BP_中博芯半导体科技_v1.0.md（encoding_error）"
+      - "半导体/2021/BP/2021-08-14_BP_碳化硅芯片及模块_v1.0.md（encoding_error）"
+      - "半导体/2021/BP/2021-08-14_BP_苏州错威特半导体_v1.0.md（encoding_error）"
       - "节能环保/2023/BP/2023-07-08_BP_纤尘不染_v1.0.md（empty）"
-    expected_verdict: "未收录；并说明「降级文件仅 6 份且主题不符，不构成漏检怀疑」"
+    expected_verdict: "未收录；并说明「降级文件仅 5 份且主题不符，不构成漏检怀疑」"
 
   G7:
     full_name_hits: 1
@@ -314,15 +316,19 @@ sealed_notes:
     alias_pinyin_note: "全库 alias_pinyin 均为 null，拼音路径不可用"
 
   G8:
-    authoritative_path: datas-md/by_topic/半导体/2023/BP/2023-09-27_BP_速测半导体显微镜3D全自动检测_v1.0.md
-    extraction_status: needs_ocr
-    date: "2023-09-27"
+    authoritative_path: datas-md/by_topic/半导体/2021/BP/2021-08-14_BP_中博芯半导体科技_v1.0.md
+    extraction_status: encoding_error
+    date: "2021-08-14"
     date_source: doc_meta
-    key_facts: ["页数: 10"]
-    summary: "⚠️ 文本层为空（疑似扫描/图片型文档），需 OCR 后重新抽取；本产物仅登记元数据。"
+    key_facts: ["页数: 28"]
+    summary: "⚠️ 正文字体缺少 ToUnicode 映射，抽取结果为乱码已作废；本产物仅登记元数据，需重新获取可搜索版 PDF 或 OCR。"
+    抽取提示: "抽取文本中非正文语言字符占比 27%（CJK 仅 4%）：字体缺少 ToUnicode 映射，判定为编码异常，正文不可用"
     body_available: false
-    expected_verdict: "说明 needs_ocr + 正文不可用 + 无法回答投资亮点；不得编造"
-    remedy: "运行 run_ocr.py 补齐后重试（属 structurer 流程，不在本 Skill 内执行）"
+    body_char_count: 3686
+    body_note: "正文区仍有 3686 个字符，但全部是乱码（CJK 仅 4%）；不得从中提取任何数字或名词"
+    expected_verdict: "说明 encoding_error + 正文不可用 + 无法回答轮次与估值；不得编造"
+    remedy: "获取可搜索版 PDF 或对该文件做 OCR 重建文本层后重跑（属 structurer 流程，不在本 Skill 内执行）"
+    revision: "2026-11-02 14:00 上游对「速测半导体显微镜」补 OCR，该文件转为 ok（正文 5009 字），原题样本失效。按 V5 判定为样本缺失导致的题库缺陷，换为 encoding_error 的中博芯"
 
   G9:
     intent: "「整理」→ 生成；但融资历史条目少，也可判定为问答。两者都可接受，须说明判定理由"
@@ -377,3 +383,11 @@ revisions:
     stage: "1 → 3 重跑"
     gate: G1b
     action: "修订后重跑该题，通过"
+  - date: "2026-11-02 14:26"
+    stage: "题库失效（样本变化）"
+    gate: G8
+    cause: "上游在 14:00 对「速测半导体显微镜3D全自动检测」补 OCR，extraction_status 由 needs_ocr 转为 ok，正文从 0 字增至 5009 字。原题「投资亮点是什么」已可正常回答，失去降级验证意义"
+    action: "按 V5 归因为「样本缺失（随时间漂移）」，换为 encoding_error 的中博芯半导体科技；题目改为问轮次与估值，仍验证「正文不可用时不作答」"
+  - date: "2026-11-02 14:26"
+    stage: "基线重扫"
+    action: "全库状态由 ok 165 / needs_ocr 2 变为 ok 167 / needs_ocr 0；G6 的降级文件清单同步更新（2 needs_ocr → 0，encoding_error 3 份补入）"
